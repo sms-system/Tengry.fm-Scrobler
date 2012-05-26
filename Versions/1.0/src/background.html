@@ -1,0 +1,57 @@
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf8" />
+	<script type="text/javascript" src="lastfmjs/md5-min.js"></script>
+	<script type="text/javascript" src="lastfmjs/lastfm.api.js"></script>
+	<script type="text/javascript" src="lastfmjs/lastfm.api.cache.js"></script>
+	<script>
+	var breakTime = 3000;
+	var key = "";
+	var workStatus = false;
+	if (localStorage["tengry_lastfm"]) key = localStorage["tengry_lastfm"];
+	else chrome.tabs.create({"url":"http://www.lastfm.ru/api/auth/?api_key=605884315bea360d9b9577770ab502c1", "selected":true});
+	var cache = new LastFMCache();
+	lastfm = new LastFM({
+		apiKey    : '605884315bea360d9b9577770ab502c1',
+		apiSecret : 'a0879342bb764a5bb2edb864c2343b51',
+		cache     : cache
+	});
+	var timer, onAir, singer, song;
+	var lastOnAir="";
+	function getOnAir() {
+		x = new XMLHttpRequest();
+		x.onreadystatechange = function() {
+			if (x.readyState != 4) return;
+			if (x.status==200) {
+				onAir=x.responseText;
+				if (onAir != lastOnAir) scroble();
+			}
+		}
+		x.open("GET","http://tengryfm.kz/cron/player-get-tracklist.php?f=getCurTrack",true);
+		x.send();
+	}
+	function scroble() {
+		var separatorPosition = onAir.indexOf(" - ");
+		if (separatorPosition > 0) {
+			var ts = Math.floor(new Date().getTime()/1000);
+			singer = onAir.substring(0, separatorPosition);
+			song = onAir.substring(separatorPosition + 3);
+			lastOnAir = onAir;
+			lastfm.track.scrobble({artist: singer, track: song, timestamp: ts}, {key: key});
+		}
+	}
+	function getNowPlayingInfo() {
+		getOnAir();
+		timer = setTimeout(getNowPlayingInfo,breakTime);
+	}
+	chrome.browserAction.onClicked.addListener(function(){
+		chrome.browserAction.setIcon({path:"ico_" + (workStatus?"off":"on") + ".png"});
+		workStatus = !workStatus;
+		if (workStatus) getNowPlayingInfo();
+		else clearTimeout(timer);
+	});
+	</script>
+</head>
+<body>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<html>
+<head>
+	<title>Tengry.fm scrobbler подключен</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf8" />
+	<script type="text/javascript" src="lastfmjs/md5-min.js"></script>
+	<script type="text/javascript" src="lastfmjs/lastfm.api.js"></script>
+</head>
+<body>
+<div style="text-align:center; margin: 40px; width:500px; border:solid silver 1px; border-radius: 10px; margin: auto; font-family:arial; font-size: 14px;">
+<h1><span id=userName></span></h1>
+<h3 id="message" style="color: gray;"></h3>
+</div>
+	<script>
+	var lastfm = new LastFM({
+		apiKey    : '605884315bea360d9b9577770ab502c1',
+		apiSecret : 'a0879342bb764a5bb2edb864c2343b51'
+	});
+	var token = getTokenFromUrl(window.location.href);
+	if (token != "") {
+		if (token=="error") throw "error token taked";
+		lastfm.auth.getSession({token: token}, {success: function(data){
+			sk = data.session.key;
+			nm = data.session.name;
+			localStorage["tengri_lastfm"] = sk;
+			localStorage["tengri_lastfm_username"] = nm;
+			chrome.extension.getBackgroundPage().key = sk;
+			chrome.extension.getBackgroundPage().username = nm;
+			document.getElementById("userName").innerHTML = data.session.name;
+			document.getElementById("message").innerHTML = "Tengry.fm scrobbler подключен к вашему Last.fm аккуанту.";
+			window.close();
+		}, error: function(code, message){
+			if (code == 4) document.getElementById("message").innerHTML = "Срок действия токена истёк. Повторите авторизацию повторно!";
+		}});
+	} else document.getElementById("message").innerHTML = "Ошибка запроса токена. Повторите авторизацию повторно!";
+	function getTokenFromUrl(url) {
+		index = url.indexOf("token=");
+		if (index!=-1) token = url.substring(index+6);
+		else token = "";
+		return token;
+	}
+	</script>
+</body>
+</html>

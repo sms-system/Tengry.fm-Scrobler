@@ -1,0 +1,7 @@
+{
+  "background_page": "background.html",
+  "permissions": [ "tabs", "notifications", http://tengryfm.kz/*" ],
+  "name": "Tengri.FM Scrobler",
+  "version": "1.0",
+  "description": "Скроблим треки радио Tengry.fm на Last.fm"
+}

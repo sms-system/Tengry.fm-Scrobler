@@ -1,0 +1,103 @@
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf8" />
+	<script type="text/javascript" src="lastfmjs/md5-min.js"></script>
+	<script type="text/javascript" src="lastfmjs/lastfm.api.js"></script>
+	<script type="text/javascript" src="lastfmjs/lastfm.api.cache.js"></script>
+	<script>
+	var breakTime = 3000;
+	var workStatus = false;
+	var key = "";
+	var like = false;
+	localStorage["tengri_like"] = false;
+	if (!localStorage["tengri_lastfm"] || !localStorage["tengri_lastfm_username"]) 
+		chrome.tabs.create({"url":"http://www.lastfm.ru/api/auth/?api_key=605884315bea360d9b9577770ab502c1", "selected":true});
+	key = localStorage["tengri_lastfm"];
+	username = localStorage["tengri_lastfm_username"];
+	var cache = new LastFMCache();
+	lastfm = new LastFM({
+		apiKey    : '605884315bea360d9b9577770ab502c1',
+		apiSecret : 'a0879342bb764a5bb2edb864c2343b51',
+		cache     : cache
+	});
+	var timer, onAir, singer, song;
+	var lastOnAir = "";
+	localStorage["tengri_song"] = "";
+	localStorage["tengri_singer"] = "";
+	function getOnAir() {
+		x = new XMLHttpRequest();
+		x.onreadystatechange = function() {
+			if (x.readyState != 4) return;
+			if (x.status==200) {
+				onAir=x.responseText;
+				if (onAir != lastOnAir) {
+					localStorage["tengri_getinfo"] = false;
+					localStorage["tengri_like"]    = false;
+					var separatorPosition = onAir.indexOf(" - ");
+					if (separatorPosition > 0) {
+						var ts = Math.floor(new Date().getTime()/1000);
+						singer = onAir.substring(0, separatorPosition);
+						song   = onAir.substring(separatorPosition + 3);
+						lastfm.track.getCorrection({artist: singer, track: song}, 
+							{success: function(data){
+								if(data.corrections.correction) {
+									var info = data.corrections.correction.track;
+									singer = info.artist.name;
+									song   = info.name;
+									localStorage["tengri_song"]    = song;
+									localStorage["tengri_singer"]  = singer;
+								}
+								localStorage["tengri_getinfo"] = true;
+							}, error: function(){ }
+						});
+						lastfm.track.scrobble({artist: singer, track: song, timestamp: ts}, {key: key});
+					} else {
+						song   = onAir;
+						singer = "";
+					}
+					lastOnAir = onAir;
+					localStorage["tengri_song"]   = song;
+					localStorage["tengri_singer"] = singer;
+				}
+				if (singer) lastfm.track.getInfo({artist: singer, track: song, username: username}, 
+					{success: function(data){
+						if(data.track.userloved==1) localStorage["tengri_like"] = true;
+						else localStorage["tengri_like"] = false;
+					}
+				});
+			}
+		}
+		x.open("GET","http://tengryfm.kz/cron/player-get-tracklist.php?f=getCurTrack",true);
+		x.send();
+	}
+	function getNowPlayingInfo() {
+		getOnAir();
+		timer = setTimeout(getNowPlayingInfo,breakTime);
+	}
+	chrome.browserAction.onClicked.addListener(function(){
+		if (!workStatus) {
+			workStatus = true;
+			getNowPlayingInfo();
+			chrome.browserAction.setIcon({path:"ico_on.png"});
+			chrome.browserAction.setPopup({popup:"popup.html"});
+		}
+	});
+	chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+		if (request.act == "work_off") {
+			workStatus = false;
+			chrome.browserAction.setIcon({path:"ico_off.png"});
+			clearTimeout(timer);
+			chrome.browserAction.setPopup({popup:""});
+		}
+		if (request.act == "like_on") {
+			lastfm.track.love({artist: request.singer, track: request.song}, {key: key});
+		}
+		if (request.act == "like_off") {
+			lastfm.track.unlove({artist: request.singer, track: request.song}, {key: key});
+		}
+	});
+	</script>
+</head>
+<body>
+</body>
+</html>

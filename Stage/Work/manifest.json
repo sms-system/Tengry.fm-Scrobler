@@ -1,0 +1,14 @@
+{
+  "background_page" : "background.html",
+  "permissions"     : [ "http://tengryfm.kz/*" ],
+  "name"            : "Tengri.FM Scrobbler",
+  "icons":{
+    "128"           : "icon128.png"
+  },
+  "browser_action":{
+    "default_icon"  : "ico_off.png",
+    "default_title" : "Tengri.FM Scrobbler"
+  },
+  "version"         : "1.1",
+  "description"     : "Подарок для любимой Сунумрик"
+}
